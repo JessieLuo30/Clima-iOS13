@@ -9,19 +9,19 @@
 import Foundation
 import CoreLocation
 
-//protocol WeatherManagerDelegate {
-////    func didUpdateWeather(_ weatherManager: WeatherManager, weather: WeatherModel)
-////    func didFailWithError(error: Error)
-//}
+protocol WeatherManagerDelegate {
+    func didUpdateWeather(_ weatherManager: WeatherManager, weather: WeatherModel)
+    func didFailWithError(error: Error)
+}
 
 struct WeatherManager {
     let weatherURL = "https://api.openweathermap.org/data/2.5/weather?appid=962a6c248cbed93d8db97e0f6b2d7b28"
     
-//    var delegate: WeatherManagerDelegate?
+    var delegate: WeatherManagerDelegate?
     
     func fetchWeather(cityName: String) {
         let urlString = "\(weatherURL)&q=\(cityName)"
-        performRequest(urlString: urlString)
+        performRequest(with: urlString)
     }
 
 //    func fetchWeather(latitude: CLLocationDegrees, longitute: CLLocationDegrees) {
@@ -29,17 +29,18 @@ struct WeatherManager {
 //        performRequest(with: urlString)
 //    }
 
-    func performRequest(urlString: String) {
+    func performRequest(with urlString: String) {
         if let url = URL(string: urlString) {
             let session = URLSession(configuration: .default)
             let task = session.dataTask(with: url){(data, response, error) in
                 if error != nil {
+                    delegate?.didFailWithError(error: error!)
                     return
                 }
                 if let safeData = data {
-//                    if let weather = self.parseJSON(safeData) {
-//
-//                    }
+                    if let weather = self.parseJSON(safeData) {
+                        self.delegate?.didUpdateWeather(self, weather: weather)
+                    }
                 }
             }
             task.resume()
@@ -47,7 +48,7 @@ struct WeatherManager {
         }
     }
     
-    func parseJSON(_ weatherData: Data) -> WeatherModel {
+    func parseJSON(_ weatherData: Data) -> WeatherModel? {
         let decoder = JSONDecoder()
         do {
             let decodedData = try decoder.decode(WeatherData.self, from: weatherData)
@@ -60,7 +61,7 @@ struct WeatherManager {
             return weather
             
         } catch {
-            print(error)
+            delegate?.didFailWithError(error: error)
             return nil
         }
     }
